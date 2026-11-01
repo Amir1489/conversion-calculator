@@ -1,0 +1,689 @@
+<title>ماشین حساب نرخ تبدیل</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<style>
+/* ── tokens: glassmorphism dark-first, fluent app feel ── */
+:root {
+  --bg-base:    #0d0d12;
+  --bg-noise:   url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  --glass-bg:   rgba(255,255,255,0.04);
+  --glass-bg2:  rgba(255,255,255,0.065);
+  --glass-bg3:  rgba(255,255,255,0.028);
+  --glass-border: rgba(255,255,255,0.09);
+  --glass-border-accent: rgba(236,167,44,0.35);
+  --accent:     #ECA72C;
+  --accent-h:   #f5b93a;
+  --accent-glow: rgba(236,167,44,0.32);
+  --accent-dim:  rgba(236,167,44,0.10);
+  --fg:         #eeeef2;
+  --fg-muted:   #888898;
+  --fg-dim:     #454558;
+  --radius:     20px;
+  --radius-sm:  12px;
+  --blur:       saturate(180%) blur(24px);
+  --shadow:     0 8px 48px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4);
+  --shadow-sm:  0 4px 24px rgba(0,0,0,0.4);
+  --font:       'Vazirmatn', system-ui, sans-serif;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg-base:    #e8e8f0;
+    --glass-bg:   rgba(255,255,255,0.55);
+    --glass-bg2:  rgba(255,255,255,0.72);
+    --glass-bg3:  rgba(255,255,255,0.38);
+    --glass-border: rgba(0,0,0,0.07);
+    --glass-border-accent: rgba(180,120,10,0.3);
+    --accent:     #c98a18;
+    --accent-h:   #b87810;
+    --accent-glow: rgba(180,120,10,0.22);
+    --accent-dim:  rgba(180,120,10,0.10);
+    --fg:         #16161e;
+    --fg-muted:   #5a5a72;
+    --fg-dim:     #b0b0c0;
+    --shadow:     0 8px 48px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+    --shadow-sm:  0 4px 24px rgba(0,0,0,0.08);
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg-base:    #e8e8f0;
+  --glass-bg:   rgba(255,255,255,0.55);
+  --glass-bg2:  rgba(255,255,255,0.72);
+  --glass-bg3:  rgba(255,255,255,0.38);
+  --glass-border: rgba(0,0,0,0.07);
+  --glass-border-accent: rgba(180,120,10,0.3);
+  --accent:     #c98a18;
+  --accent-h:   #b87810;
+  --accent-glow: rgba(180,120,10,0.22);
+  --accent-dim:  rgba(180,120,10,0.10);
+  --fg:         #16161e;
+  --fg-muted:   #5a5a72;
+  --fg-dim:     #b0b0c0;
+  --shadow:     0 8px 48px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+  --shadow-sm:  0 4px 24px rgba(0,0,0,0.08);
+  color-scheme: light;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  font-family: var(--font);
+  color: var(--fg);
+  direction: rtl;
+  min-height: 100%;
+}
+
+body {
+  background: var(--bg-base);
+  background-image: var(--bg-noise);
+  padding-block: 48px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  /* Fluent ambient orbs */
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* ambient background light blobs */
+body::before, body::after {
+  content: "";
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(80px);
+  opacity: 0.18;
+}
+body::before {
+  width: 600px; height: 600px;
+  top: -200px; right: -150px;
+  background: radial-gradient(circle, rgba(236,167,44,0.6), transparent 70%);
+}
+body::after {
+  width: 500px; height: 500px;
+  bottom: -100px; left: -100px;
+  background: radial-gradient(circle, rgba(100,80,200,0.5), transparent 70%);
+}
+
+.container {
+  max-width: 660px;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Header ── */
+.header {
+  text-align: center;
+  padding-block: 4px;
+}
+.header h1 {
+  font-size: clamp(1.45rem, 4vw, 1.9rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+.header h1 span { color: var(--accent); }
+.header p {
+  margin-top: 7px;
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+  font-weight: 400;
+}
+
+/* ── Glass card base ── */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+/* top-edge shimmer */
+.glass::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 5%,
+    rgba(255,255,255,0.18) 40%,
+    rgba(255,255,255,0.22) 60%,
+    transparent 95%
+  );
+  pointer-events: none;
+}
+
+/* ── Input Card ── */
+.card {
+  padding: 26px 26px 24px;
+}
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(140deg, rgba(236,167,44,0.05) 0%, transparent 55%);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.card-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-eyebrow::before {
+  content: "";
+  width: 3px; height: 13px;
+  background: var(--accent);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* ── Inputs ── */
+.inputs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 480px) { .inputs-grid { grid-template-columns: 1fr; } }
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.field label {
+  font-size: 0.775rem;
+  font-weight: 500;
+  color: var(--fg-muted);
+}
+
+.input-wrap { position: relative; }
+.input-wrap .unit {
+  position: absolute;
+  left: 11px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.8rem;
+  color: var(--fg-dim);
+  pointer-events: none;
+}
+
+input[type="number"] {
+  width: 100%;
+  background: var(--glass-bg3);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: 0.975rem;
+  font-weight: 600;
+  padding: 11px 13px;
+  padding-left: 36px;
+  text-align: right;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  -moz-appearance: textfield;
+  font-variant-numeric: tabular-nums;
+  /* kill the blue tap highlight */
+  -webkit-tap-highlight-color: transparent;
+}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+input[type="number"]:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+  background: var(--glass-bg2);
+}
+
+/* ── Button — fluent, no blue outline ── */
+.btn {
+  width: 100%;
+  margin-top: 18px;
+  padding: 14px;
+  background: var(--accent);
+  color: #120d00;
+  font-family: var(--font);
+  font-size: 0.975rem;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  position: relative;
+  overflow: hidden;
+  /* kill outline & blue flash entirely */
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  transition:
+    transform  0.14s cubic-bezier(0.34,1.56,0.64,1),
+    box-shadow 0.18s ease,
+    filter     0.15s ease;
+}
+.btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.18), transparent 60%);
+  border-radius: inherit;
+  pointer-events: none;
+}
+/* ripple layer */
+.btn::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  width: 120%;
+  padding-top: 120%;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  background: rgba(255,255,255,0.22);
+  pointer-events: none;
+  transition: transform 0.5s ease, opacity 0.5s ease;
+  opacity: 0;
+}
+.btn.ripple::after {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 0;
+  transition: transform 0.45s ease, opacity 0.45s ease;
+}
+.btn:hover  { filter: brightness(1.09); transform: translateY(-1px); box-shadow: 0 8px 28px rgba(236,167,44,0.38); }
+.btn:active { transform: translateY(0) scale(0.98); filter: brightness(0.97); }
+/* custom focus ring — not the browser blue */
+.btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--bg-base), 0 0 0 4px var(--accent);
+}
+
+/* ── Results ── */
+.results {
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+}
+.results.visible {
+  display: flex;
+  animation: slideUp 0.38s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(18px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.results-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 480px) { .results-row { grid-template-columns: 1fr; } }
+
+.stat-card {
+  padding: 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+
+.stat-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.stat-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--fg);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+.stat-sub {
+  font-size: 0.7rem;
+  color: var(--fg-dim);
+}
+
+/* ── Hero: extra sales ── */
+.hero-card {
+  padding: 32px 28px;
+  text-align: center;
+  border-color: var(--glass-border-accent);
+  box-shadow: var(--shadow), 0 0 60px var(--accent-glow);
+}
+.hero-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 65% 50% at 50% 0%, rgba(236,167,44,0.12), transparent 70%);
+  pointer-events: none;
+}
+/* accent top bar */
+.hero-card .top-bar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}
+
+.hero-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 10px;
+  position: relative;
+}
+.hero-value {
+  font-size: clamp(2.1rem, 6vw, 3.1rem);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--accent);
+  text-shadow: 0 0 48px var(--accent-glow), 0 0 96px rgba(236,167,44,0.10);
+  position: relative;
+}
+.hero-desc {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  color: var(--fg-muted);
+  line-height: 1.55;
+  position: relative;
+}
+.hero-badge {
+  display: inline-block;
+  margin-top: 14px;
+  background: var(--accent-dim);
+  border: 1px solid rgba(236,167,44,0.2);
+  border-radius: 99px;
+  padding: 4px 14px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent);
+  position: relative;
+}
+
+/* ── Chart ── */
+.chart-card { padding: 22px 22px 18px; }
+
+.chart-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  margin-bottom: 16px;
+}
+
+.chart-bars {
+  display: flex;
+  gap: 20px;
+  align-items: flex-end;
+  height: 130px;
+  padding-bottom: 32px;
+  position: relative;
+}
+.chart-bars::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 32px 0;
+  background: repeating-linear-gradient(
+    180deg,
+    var(--glass-border) 0px, var(--glass-border) 1px,
+    transparent 1px, transparent 25%
+  );
+  pointer-events: none;
+}
+
+.bar-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  position: relative;
+}
+.bar-track {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.bar {
+  width: min(52px, 62%);
+  border-radius: 7px 7px 3px 3px;
+  transition: height 0.75s cubic-bezier(0.34,1.4,0.64,1);
+  position: relative;
+  min-height: 4px;
+}
+.bar-current {
+  background: var(--glass-bg2);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.bar-target {
+  background: linear-gradient(180deg, var(--accent-h) 0%, rgba(236,167,44,0.65) 100%);
+  box-shadow: 0 -6px 24px rgba(236,167,44,0.40);
+}
+.bar-value {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.65rem;
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.bar-current .bar-value { color: var(--fg-muted); }
+.bar-target  .bar-value { color: var(--accent); }
+
+.bar-label {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+</style>
+
+<div class="container">
+  <div class="header">
+    <h1>ماشین حساب <span>نرخ تبدیل</span></h1>
+    <p>فروش اضافه‌ای که بدون ترافیک بیشتر به دست می‌آید</p>
+  </div>
+
+  <!-- Input card -->
+  <div class="glass card">
+    <div class="card-eyebrow">داده‌های ورودی</div>
+    <div class="inputs-grid">
+      <div class="field">
+        <label for="visitors">بازدیدکننده ماهانه</label>
+        <div class="input-wrap">
+          <span class="unit">👤</span>
+          <input type="number" id="visitors" value="10000" min="1" step="100">
+        </div>
+      </div>
+      <div class="field">
+        <label for="currentRate">نرخ تبدیل فعلی</label>
+        <div class="input-wrap">
+          <span class="unit">٪</span>
+          <input type="number" id="currentRate" value="2" min="0.01" max="100" step="0.1">
+        </div>
+      </div>
+      <div class="field">
+        <label for="aov">میانگین ارزش سفارش (تومان)</label>
+        <div class="input-wrap">
+          <span class="unit">﷼</span>
+          <input type="number" id="aov" value="500000" min="1" step="10000">
+        </div>
+      </div>
+      <div class="field">
+        <label for="targetRate">نرخ تبدیل هدف</label>
+        <div class="input-wrap">
+          <span class="unit">٪</span>
+          <input type="number" id="targetRate" value="3" min="0.01" max="100" step="0.1">
+        </div>
+      </div>
+    </div>
+    <button class="btn" id="calcBtn">محاسبه کن</button>
+  </div>
+
+  <!-- Results -->
+  <div class="results" id="results">
+
+    <div class="results-row">
+      <div class="glass stat-card">
+        <div class="stat-label">فروش فعلی ماهانه</div>
+        <div class="stat-value" id="currentSales">—</div>
+        <div class="stat-sub">تومان در ماه</div>
+      </div>
+      <div class="glass stat-card">
+        <div class="stat-label">فروش با نرخ هدف</div>
+        <div class="stat-value" id="targetSales">—</div>
+        <div class="stat-sub">تومان در ماه</div>
+      </div>
+    </div>
+
+    <div class="glass hero-card">
+      <div class="top-bar"></div>
+      <div class="hero-eyebrow">فروش اضافه بدون ترافیک بیشتر</div>
+      <div class="hero-value" id="extraSales">۰</div>
+      <div class="hero-desc">فقط با بهبود نرخ تبدیل — بدون هزینه تبلیغات یا جذب بازدیدکننده جدید</div>
+      <div class="hero-badge" id="growthBadge">رشد ۰٪</div>
+    </div>
+
+    <div class="glass chart-card">
+      <div class="chart-title">مقایسه فروش ماهانه</div>
+      <div class="chart-bars">
+        <div class="bar-group">
+          <div class="bar-track">
+            <div class="bar bar-current" id="barCurrent" style="height:0%">
+              <span class="bar-value" id="barCurrentLabel"></span>
+            </div>
+          </div>
+          <span class="bar-label">فعلی</span>
+        </div>
+        <div class="bar-group">
+          <div class="bar-track">
+            <div class="bar bar-target" id="barTarget" style="height:0%">
+              <span class="bar-value" id="barTargetLabel"></span>
+            </div>
+          </div>
+          <span class="bar-label">هدف</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function fa(n) { return Math.round(n).toLocaleString('fa-IR'); }
+function shortFa(n) {
+  if (n >= 1e9) return fa(n / 1e9) + ' م‍';
+  if (n >= 1e6) return fa(n / 1e6) + ' م';
+  if (n >= 1e3) return fa(n / 1e3) + ' ه';
+  return fa(n);
+}
+
+function animateCount(el, to, duration, fmt) {
+  const start = performance.now();
+  (function tick(now) {
+    const t = Math.min((now - start) / duration, 1);
+    const e = 1 - Math.pow(2, -10 * t);
+    el.textContent = fmt(to * e);
+    if (t < 1) requestAnimationFrame(tick);
+    else el.textContent = fmt(to);
+  })(start);
+}
+
+// Ripple on btn
+const btn = document.getElementById('calcBtn');
+btn.addEventListener('pointerdown', function(e) {
+  this.classList.remove('ripple');
+  void this.offsetWidth; // reflow
+  this.classList.add('ripple');
+});
+
+function calculate() {
+  const visitors   = +document.getElementById('visitors').value   || 0;
+  const curRate    = +document.getElementById('currentRate').value || 0;
+  const aov        = +document.getElementById('aov').value         || 0;
+  const targetRate = +document.getElementById('targetRate').value  || 0;
+  if (!visitors || !curRate || !aov || !targetRate) return;
+
+  const cur   = visitors * (curRate    / 100) * aov;
+  const tgt   = visitors * (targetRate / 100) * aov;
+  const extra = Math.max(0, tgt - cur);
+  const growthPct = curRate > 0 ? ((targetRate - curRate) / curRate) * 100 : 0;
+
+  const resultsEl = document.getElementById('results');
+  if (!resultsEl.classList.contains('visible')) {
+    resultsEl.classList.add('visible');
+  }
+
+  const DUR = 1100;
+  animateCount(document.getElementById('currentSales'), cur,   DUR, v => fa(v) + ' تومان');
+  animateCount(document.getElementById('targetSales'),  tgt,   DUR, v => fa(v) + ' تومان');
+  animateCount(document.getElementById('extraSales'),   extra, DUR, v => fa(v) + ' تومان');
+
+  document.getElementById('growthBadge').textContent = 'رشد ' + fa(growthPct) + '٪ در نرخ تبدیل';
+
+  const max = Math.max(cur, tgt);
+  requestAnimationFrame(() => {
+    document.getElementById('barCurrent').style.height = max > 0 ? (cur / max * 100) + '%' : '0%';
+    document.getElementById('barTarget').style.height  = max > 0 ? (tgt / max * 100) + '%' : '0%';
+    document.getElementById('barCurrentLabel').textContent = shortFa(cur);
+    document.getElementById('barTargetLabel').textContent  = shortFa(tgt);
+  });
+}
+
+btn.addEventListener('click', calculate);
+document.querySelectorAll('input').forEach(inp =>
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') calculate(); })
+);
+
+// Default calc on load
+window.addEventListener('DOMContentLoaded', calculate);
+</script>
